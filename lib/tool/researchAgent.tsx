@@ -19,19 +19,25 @@ import { z } from "zod";
 import zodToJsonSchema from "zod-to-json-schema";
 import { FunctionsAgentAction } from "langchain/agents/openai/output_parser";
 import { convertToOpenAIFunction } from "@langchain/core/utils/function_calling";
+interface Props{
+  topic:string;
+  openAiKey:string;
+  tavilyKey:string;
+  modelName:string;
+}
 
-
-const researchAgent = async (topic: any) => {
+const researchAgent = async ({topic,openAiKey,tavilyKey,modelName}:Props) => {
     try {
     const llm = new ChatOpenAI({
-        modelName: "gpt-3.5-turbo-1106",
+        modelName: modelName===""?"gpt-3.5-turbo-1106":modelName,
+        openAIApiKey:openAiKey===""?process.env.OPENAI_API_KEY:openAiKey
     });
     
     const searchTool = new DynamicTool({
       name: "web-search-tool",
       description: "Tool for getting the latest information from the web",
       func: async (searchQuery: string, runManager) => {
-          const retriever = new TavilySearchAPIRetriever({apiKey:process.env.TAVLY_SEARCH_API});
+          const retriever = new TavilySearchAPIRetriever({apiKey:tavilyKey!==""?process.env.TAVLY_SEARCH_API:tavilyKey});
         const docs = await retriever.invoke(
           searchQuery,
           runManager?.getChild()
@@ -52,7 +58,7 @@ const researchAgent = async (topic: any) => {
       learningObjectives: z.array(z.string().describe("The list of learning objectives of the tutorial to return to the user")),
       prerequisites: z.array(z.string().describe("The list of prerequisites that are required before starting this tutorial to return to the user")),
       introduction: z.array(z.object({heading:z.string().describe("A heading related to the paragraph property of this object to return to the user"),paragraph:z.string().describe("A comprehensive paragrapph related to that heading"),imgUrl:z.string().describe("any image url that will be a visual aid for this paragraph"),headingNumber:z.number().describe("size of the heading in format 1:main heading,2:subheading,3:small subheading")}).describe("this object contains the heading, paragraph related to that heading, image url for viusal aid and heading number for styling purpose.")).describe("this array will contain all the major content related to the introduction about the input topic in an object of heading and paragraphs format to return to the user"),
-      exampleCode: z.object({beforeCodeExplanation:z.string().describe("This property will include the explanation about code that could occur before the code"), code:z.object({languageName:z.string().describe("This property will contain the language of the code"),code:z.array(z.string().describe("the line of code")).describe("this will contain the list for lines of code")}),afterCodeExplanation:z.string().describe("this property will contain the example code itself if any code related topic.")}),
+      exampleCode: z.object({beforeCodeExplanation:z.string().describe("This property will include the explanation about code that could occur before the code"), code:z.object({languageName:z.string().describe("This property will contain the language of the code"),code:z.array(z.string().describe("the line of code")).describe("this will contain the list for lines of code. these lines should in a structure so that the if i use it after joining all the lines with prismjs with html-react-parser it shows the code as in vs code")}),afterCodeExplanation:z.string().describe("this property will contain the example code itself if any code related topic.")}),
       testYourKnowledge: z.array(z.object({question:z.string().describe("This will contain the main question statement of the mcq"),options:z.array(z.string().describe("this will contain the option")).describe("the list of option related to the question"),correctOption:z.string().describe("correct option from the above option list.")}).describe("The list of MCQs object to test your knowledge that related to all the properties in the schema")),
       sources: z
         .array(z.string())
@@ -140,7 +146,7 @@ const researchAgent = async (topic: any) => {
         res,
     });
     fs.writeFileSync("res.json",JSON.stringify(res))
-    return res;
+    return JSON.stringify(res);
   } catch (error) {
       console.log(error);
     }
