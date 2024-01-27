@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect } from "react";
 import parse from "html-react-parser";
+// @ts-ignore
 import Prism from "prismjs";
 
 import "prismjs/components/prism-python";
